@@ -1,0 +1,410 @@
+import { useState, useEffect, useRef } from "react";
+
+const colors = {
+  cream: "#FAF7F2", rose: "#D4888A", sage: "#7A9E7E",
+  charcoal: "#2D2D2D", roseLight: "#f5d5d6", sageLight: "#d4e6d5"
+};
+
+const style = document.createElement("style");
+style.textContent = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: #FAF7F2; font-family: 'Inter', sans-serif; color: #2D2D2D; }
+  .fade-up { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+  .stagger-1 { transition-delay: 0.1s; }
+  .stagger-2 { transition-delay: 0.2s; }
+  .stagger-3 { transition-delay: 0.3s; }
+  .stagger-4 { transition-delay: 0.4s; }
+  .hero-fade { animation: heroFade 0.9s ease forwards; opacity: 0; }
+  @keyframes heroFade { to { opacity: 1; transform: translateY(0); } from { opacity: 0; transform: translateY(20px); } }
+  .pill-btn { display: inline-block; padding: 10px 24px; border-radius: 999px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; border: 2px solid #D4888A; }
+  .pill-btn-filled { background: #D4888A; color: white; }
+  .pill-btn-filled:hover { background: #c07779; border-color: #c07779; }
+  .pill-btn-outline { background: transparent; color: #D4888A; }
+  .pill-btn-outline:hover { background: #f5d5d6; }
+  .pill-btn-sage { background: #7A9E7E; color: white; border-color: #7A9E7E; }
+  .pill-btn-sage:hover { background: #6a8e6e; }
+  .card { background: white; border-radius: 16px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .section-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #D4888A; font-weight: 600; margin-bottom: 8px; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 36px; color: #2D2D2D; line-height: 1.2; margin-bottom: 20px; }
+  .timeline-line { position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: #f5d5d6; }
+  .timeline-dot { width: 14px; height: 14px; border-radius: 50%; background: #D4888A; border: 3px solid white; box-shadow: 0 0 0 2px #D4888A; flex-shrink: 0; margin-top: 4px; }
+  .nav-link { text-decoration: none; color: #2D2D2D; font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 6px; transition: color 0.2s; white-space: nowrap; }
+  .nav-link:hover { color: #D4888A; }
+  .tech-icon { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px; border-radius: 12px; background: #FAF7F2; font-size: 11px; font-weight: 500; color: #2D2D2D; text-align: center; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: #d4e6d5; color: #3d6b41; font-size: 12px; font-weight: 500; }
+  .hamburger { display: flex; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+  .hamburger span { display: block; width: 22px; height: 2px; background: #2D2D2D; border-radius: 2px; transition: all 0.3s; }
+  .desktop-nav { display: flex; }
+  @media (max-width: 767px) {
+    .section-title { font-size: 28px; }
+    .desktop-nav { display: none !important; }
+  }
+  @media (min-width: 768px) {
+    .hamburger { display: none; }
+    .mobile-nav { display: none !important; }
+  }
+`;
+document.head.appendChild(style);
+
+function useInView(ref) {
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); }, { threshold: 0.12 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  return vis;
+}
+
+const navLinks = [
+  ["Meet Me","meet"], ["Philosophy","philosophy"], ["Resume","resume"],
+  ["References","references"], ["Lessons","lessons"], ["Management","management"],
+  ["Tech","tech"], ["Contact","contact"]
+];
+
+function scrollTo(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
+function Navbar() {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", h);
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+  return (
+    <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:100, background: scrolled ? "rgba(250,247,242,0.97)" : "transparent", backdropFilter: scrolled ? "blur(8px)" : "none", borderBottom: scrolled ? "1px solid #f0ebe3" : "none", transition:"all 0.3s", padding:"0 24px" }}>
+      <div style={{ maxWidth:1100, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", height:64 }}>
+        <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:colors.rose }}>Ms. Weinstein</span>
+        <div className="desktop-nav" style={{ gap:4, flexWrap:"wrap", justifyContent:"flex-end" }}>
+          {navLinks.map(([l,h]) => <button key={h} onClick={()=>scrollTo(h)} className="nav-link" style={{ background:"none", border:"none", cursor:"pointer" }}>{l}</button>)}
+        </div>
+        <div className="hamburger" onClick={() => setOpen(o=>!o)}>
+          <span style={{ transform: open ? "rotate(45deg) translate(5px,5px)" : "" }}/>
+          <span style={{ opacity: open ? 0 : 1 }}/>
+          <span style={{ transform: open ? "rotate(-45deg) translate(5px,-5px)" : "" }}/>
+        </div>
+      </div>
+      <div className="mobile-nav" style={{ display: open ? "block" : "none", background:"white", borderTop:"1px solid #f0ebe3", padding:"12px 16px 20px" }}>
+        {navLinks.map(([l,h]) => <button key={h} onClick={()=>{ scrollTo(h); setOpen(false); }} className="nav-link" style={{ display:"block", padding:"10px 12px", background:"none", border:"none", cursor:"pointer", width:"100%", textAlign:"left" }}>{l}</button>)}
+      </div>
+    </nav>
+  );
+}
+
+function Hero() {
+  return (
+    <section id="hero" style={{ background:`linear-gradient(160deg, #fdf6f0 0%, ${colors.roseLight} 60%, ${colors.sageLight} 100%)`, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", textAlign:"center", padding:"100px 24px 60px" }}>
+      <div>
+        <div className="hero-fade" style={{ animationDelay:"0.1s", marginBottom:28 }}>
+          <div style={{ width:160, height:160, borderRadius:"50%", background:`linear-gradient(135deg, ${colors.roseLight}, ${colors.sageLight})`, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"center", border:`4px solid white`, boxShadow:"0 8px 32px rgba(212,136,138,0.25)", fontSize:56 }}>👩‍🏫</div>
+        </div>
+        <div className="hero-fade" style={{ animationDelay:"0.3s" }}>
+          <div className="section-label" style={{ marginBottom:8 }}>Welcome to my portfolio</div>
+          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:"clamp(42px,8vw,72px)", fontWeight:700, color:colors.charcoal, lineHeight:1.1, marginBottom:16 }}>Ms. Weinstein</h1>
+          <p style={{ fontSize:"clamp(16px,3vw,22px)", color:"#666", fontWeight:300, marginBottom:32, maxWidth:520, margin:"0 auto 32px" }}>Building curious minds, one lesson at a time.</p>
+          <button onClick={()=>scrollTo("meet")} className="pill-btn pill-btn-filled" style={{ fontSize:16, padding:"14px 32px", border:"none", cursor:"pointer" }}>View My Portfolio ↓</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MeetMe() {
+  const ref = useRef(); const vis = useInView(ref);
+  return (
+    <section id="meet" style={{ padding:"80px 20px", background:"white" }}>
+      <div ref={ref} style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:48 }}>
+          <div className={`fade-up${vis?" visible":""}`}>
+            <div className="section-label">About Me</div>
+            <h2 className="section-title">Meet Me</h2>
+            <p style={{ lineHeight:1.8, color:"#555", marginBottom:16 }}>I honestly can't remember a time when I didn't want to be a teacher. Growing up, I was always the kid lining up stuffed animals and giving lessons — so it probably wasn't a surprise to anyone when I made it official. What drives me every single day is the belief that every child deserves an adult in their corner who truly sees them, believes in them, and makes learning feel like an adventure worth going on.</p>
+            <p style={{ lineHeight:1.8, color:"#555", marginBottom:16 }}>I graduated from [University Name] with a degree in Elementary Education, and my student teaching experiences genuinely changed me. There's nothing quite like the moment a concept finally clicks for a kid who's been struggling — that look on their face is why I do this work.</p>
+            <p style={{ lineHeight:1.8, color:"#555" }}>When I'm not lesson planning, you'll usually find me hunting for new books, painting watercolors, or hiking somewhere with a good podcast in my ears. I bring that same curiosity and energy into my classroom every morning.</p>
+          </div>
+          <div className={`fade-up stagger-2${vis?" visible":""}`}>
+            <div className="card" style={{ border:`2px solid ${colors.roseLight}` }}>
+              <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:20, color:colors.rose }}>Fun Facts ✨</h3>
+              {[
+                ["🏡","Hometown","Philadelphia, PA"],
+                ["🎓","College","[University Name]"],
+                ["📚","Grade Level","K–5 Elementary"],
+                ["⭐","Favorite Subject","ELA & Writing"],
+                ["🎨","Hobby","Watercolor painting"],
+              ].map(([icon,label,val]) => (
+                <div key={label} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid #f5ede9" }}>
+                  <span style={{ fontSize:22 }}>{icon}</span>
+                  <div>
+                    <div style={{ fontSize:11, color:colors.sage, fontWeight:600, textTransform:"uppercase", letterSpacing:1 }}>{label}</div>
+                    <div style={{ fontSize:15, fontWeight:500 }}>{val}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Philosophy() {
+  const ref = useRef(); const vis = useInView(ref);
+  const beliefs = [
+    { icon:"💛", title:"Every Child Deserves to Feel Seen", text:"I learn my students' names on day one — but more importantly, I learn who they are. Their interests, their worries, their strengths. A child who feels known shows up ready to learn." },
+    { icon:"🌱", title:"Learning Happens Through Joy", text:"I've never met a kid who learned better when they were bored. When lessons are engaging, hands-on, and a little fun, students lean in — and that's when the real learning happens." },
+    { icon:"🏛️", title:"Structure Creates Safety", text:"Kids thrive when they know what to expect. Clear routines aren't about control — they're about giving students the predictability they need to take risks and grow." },
+  ];
+  return (
+    <section id="philosophy" style={{ padding:"80px 20px", background:colors.cream }}>
+      <div ref={ref} style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div className={`fade-up${vis?" visible":""}`} style={{ textAlign:"center", marginBottom:48 }}>
+          <div className="section-label">My Approach</div>
+          <h2 className="section-title" style={{ marginBottom:0 }}>Teaching Philosophy</h2>
+        </div>
+        <div className={`fade-up stagger-1${vis?" visible":""} card`} style={{ marginBottom:40, borderLeft:`4px solid ${colors.rose}`, background:"white" }}>
+          <p style={{ lineHeight:1.9, color:"#555", fontStyle:"italic", fontSize:16 }}>I became a teacher because I had teachers who changed my life — and I want to be that for someone else. My philosophy is simple: relationships first, always. When students trust you, everything else becomes possible. I don't believe in a one-size-fits-all classroom. Every kid who walks through my door comes with their own story, their own way of making sense of the world, and their own version of potential. My job is to meet them where they are — not where I wish they were — and build from there. I plan lessons with intention, I reflect constantly, and I never stop asking myself: is every single student in this room getting what they need today?</p>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:20 }}>
+          {beliefs.map((b,i) => (
+            <div key={i} className={`fade-up stagger-${i+1}${vis?" visible":""} card`} style={{ textAlign:"center", border:`1px solid ${colors.roseLight}` }}>
+              <div style={{ fontSize:36, marginBottom:12 }}>{b.icon}</div>
+              <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:18, marginBottom:10, color:colors.charcoal }}>{b.title}</h3>
+              <p style={{ fontSize:14, lineHeight:1.7, color:"#666" }}>{b.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Resume() {
+  const ref = useRef(); const vis = useInView(ref);
+  const items = [
+    { year:"2024", label:"Certification", title:"PA Instructional I Certificate — PK–4", sub:"Pennsylvania Department of Education" },
+    { year:"2024", label:"Student Teaching", title:"Student Teacher — Grade 3", sub:"[Elementary School Name], [District], PA · Spring 2024" },
+    { year:"2023", label:"Student Teaching", title:"Practicum — Kindergarten", sub:"[Elementary School Name], [District], PA · Fall 2023" },
+    { year:"2024", label:"Education", title:"B.S. in Elementary Education", sub:"[University Name] · GPA: 3.8 · Honors" },
+  ];
+  return (
+    <section id="resume" style={{ padding:"80px 20px", background:"white" }}>
+      <div ref={ref} style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div className={`fade-up${vis?" visible":""}`} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:16, marginBottom:40 }}>
+          <div>
+            <div className="section-label">Experience & Education</div>
+            <h2 className="section-title" style={{ marginBottom:0 }}>Resume & Credentials</h2>
+          </div>
+          <a href="#" className="pill-btn pill-btn-filled">⬇ Download Resume</a>
+        </div>
+        <div style={{ position:"relative", paddingLeft:48, marginBottom:40 }}>
+          <div className="timeline-line"/>
+          {items.map((it,i) => (
+            <div key={i} className={`fade-up stagger-${Math.min(i+1,4)}${vis?" visible":""}`} style={{ display:"flex", gap:20, marginBottom:28, position:"relative" }}>
+              <div className="timeline-dot"/>
+              <div className="card" style={{ flex:1, padding:"20px 24px" }}>
+                <div style={{ display:"flex", gap:8, marginBottom:6, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:11, background:colors.roseLight, color:colors.rose, padding:"2px 10px", borderRadius:999, fontWeight:600 }}>{it.year}</span>
+                  <span style={{ fontSize:11, background:colors.sageLight, color:colors.sage, padding:"2px 10px", borderRadius:999, fontWeight:600 }}>{it.label}</span>
+                </div>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:600 }}>{it.title}</div>
+                <div style={{ fontSize:14, color:"#888", marginTop:4 }}>{it.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className={`fade-up${vis?" visible":""}`}>
+          <div style={{ fontSize:13, fontWeight:600, letterSpacing:1, textTransform:"uppercase", color:"#999", marginBottom:12 }}>Pennsylvania Clearances</div>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+            {["✅ PA Child Abuse Clearance","✅ PA Criminal Background Check","✅ FBI Fingerprint Clearance"].map(b => <span key={b} className="badge">{b}</span>)}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function References() {
+  const ref = useRef(); const vis = useInView(ref);
+  const refs_ = [
+    { name:"Dr. Jane Smith", title:"Cooperating Teacher, Grade 3", school:"[Elementary School Name]", rel:"Cooperating Teacher — Spring 2024", quote:"She walks into a room and the energy shifts — kids light up around her. Her instincts are remarkable for a first-year teacher, and her commitment to every student is genuine." },
+    { name:"Prof. Mary Johnson", title:"Clinical Supervisor", school:"[University Name]", rel:"University Supervisor — 2023–2024", quote:"In fifteen years of supervising student teachers, few have shown her level of self-reflection and growth. She doesn't just want to be good — she wants to be excellent, and she does the work to get there." },
+    { name:"Mr. Kevin Torres", title:"Principal", school:"[Elementary School Name]", rel:"Building Principal — Practicum", quote:"Parents asked for her by name. Staff loved having her in the building. That tells you everything you need to know." },
+  ];
+  return (
+    <section id="references" style={{ padding:"80px 20px", background:colors.cream }}>
+      <div ref={ref} style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div className={`fade-up${vis?" visible":""}`} style={{ textAlign:"center", marginBottom:40 }}>
+          <div className="section-label">Recommendations</div>
+          <h2 className="section-title">References & Letters of Rec</h2>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20 }}>
+          {refs_.map((r,i) => (
+            <div key={i} className={`fade-up stagger-${i+1}${vis?" visible":""} card`} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ fontSize:24 }}>💬</div>
+              <p style={{ fontSize:14, lineHeight:1.7, color:"#555", fontStyle:"italic", flex:1 }}>"{r.quote}"</p>
+              <div style={{ borderTop:`1px solid ${colors.roseLight}`, paddingTop:12 }}>
+                <div style={{ fontWeight:600, fontSize:15 }}>{r.name}</div>
+                <div style={{ fontSize:13, color:colors.sage }}>{r.title}</div>
+                <div style={{ fontSize:13, color:"#888" }}>{r.school}</div>
+                <div style={{ fontSize:12, color:"#aaa", marginTop:4 }}>{r.rel}</div>
+              </div>
+              <a href="#" target="_blank" className="pill-btn pill-btn-outline" style={{ textAlign:"center", fontSize:13 }}>View Full Letter →</a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Lessons() {
+  const ref = useRef(); const vis = useInView(ref);
+  const plans = [
+    { subject:"ELA", grade:"Grade 3", title:"Writing Workshop: Personal Narrative", obj:"Students will draft a personal narrative with a clear beginning, middle, and end, using descriptive details to bring their story to life.", desc:"A multi-day Writers Workshop unit that walks students through the full writing process — from finding their 'seed story' to a published piece — using mentor texts, mini-lessons, and peer conferencing." },
+    { subject:"Math", grade:"Grade 2", title:"Place Value with Base-Ten Blocks", obj:"Students will represent two- and three-digit numbers using base-ten blocks and connect physical models to expanded form.", desc:"A hands-on lesson where students build numbers with manipulatives before connecting to abstract notation — concrete to representational to abstract, the way math learning is supposed to go." },
+    { subject:"Science", grade:"Grade 4", title:"The Water Cycle: Observation Lab", obj:"Students will identify and describe each stage of the water cycle through a guided experiment and scientific recording.", desc:"Students create mini water cycles in zip-lock bags, observe condensation and evaporation over 48 hours, and record findings in their science notebooks. Simple setup, genuinely exciting results." },
+  ];
+  return (
+    <section id="lessons" style={{ padding:"80px 20px", background:"white" }}>
+      <div ref={ref} style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div className={`fade-up${vis?" visible":""}`} style={{ textAlign:"center", marginBottom:40 }}>
+          <div className="section-label">Planning & Practice</div>
+          <h2 className="section-title">Lesson Plans & Observations</h2>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20, marginBottom:48 }}>
+          {plans.map((p,i) => (
+            <div key={i} className={`fade-up stagger-${i+1}${vis?" visible":""} card`} style={{ display:"flex", flexDirection:"column", gap:10, border:`1px solid ${colors.sageLight}` }}>
+              <div style={{ display:"flex", gap:8 }}>
+                <span style={{ background:colors.sageLight, color:colors.sage, padding:"3px 10px", borderRadius:999, fontSize:12, fontWeight:600 }}>{p.subject}</span>
+                <span style={{ background:colors.roseLight, color:colors.rose, padding:"3px 10px", borderRadius:999, fontSize:12, fontWeight:600 }}>{p.grade}</span>
+              </div>
+              <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:600 }}>{p.title}</h3>
+              <div style={{ fontSize:12, fontWeight:600, color:"#999", textTransform:"uppercase", letterSpacing:0.5 }}>Learning Objective</div>
+              <p style={{ fontSize:13, color:"#666", lineHeight:1.6 }}>{p.obj}</p>
+              <p style={{ fontSize:13, color:"#888", lineHeight:1.6, flex:1 }}>{p.desc}</p>
+              <a href="#" target="_blank" className="pill-btn pill-btn-sage" style={{ textAlign:"center", fontSize:13, border:"none" }}>📄 View Lesson Plan</a>
+            </div>
+          ))}
+        </div>
+        <div className={`fade-up${vis?" visible":""} card`} style={{ background:colors.cream, border:`1px solid ${colors.roseLight}` }}>
+          <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, marginBottom:12 }}>🌟 Student Teaching Reflection</h3>
+          <p style={{ lineHeight:1.8, color:"#555" }}>Student teaching humbled me in the best possible way. I went in thinking I was prepared — and I was, in a lot of ways — but nothing quite prepares you for the reality of 25 kids looking at you at 8am, ready for the day to begin. I learned to read a room quickly: when to slow down, when a kid needed a quiet check-in, when the energy was right to push further. My cooperating teacher taught me to always plan backward from the objective and to build in real checkpoints along the way. I left every single day more certain that this is exactly where I'm supposed to be.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Management() {
+  const ref = useRef(); const vis = useInView(ref);
+  const strategies = [
+    { icon:"📋", title:"Routines & Procedures", text:"I spend the first weeks of school building our classroom systems together. When students help create the norms, they actually follow them — and everyone feels ownership over how the room runs." },
+    { icon:"⭐", title:"Positive Reinforcement", text:"I catch kids doing things right and make it a big deal. Verbal praise, ClassDojo points, whole-class celebrations — because the behaviors we notice and celebrate are the ones we get more of." },
+    { icon:"🤝", title:"Restorative Practices", text:"When something goes wrong, I'm less interested in punishment and more interested in repair. Restorative conversations build the skills kids actually need — accountability, empathy, and a path forward." },
+    { icon:"🧘", title:"Calm Redirects", text:"My first response is always low-key: a look, moving closer, a quiet word. I preserve dignity and keep the lesson moving — most of the time, that's all it takes." },
+  ];
+  return (
+    <section id="management" style={{ padding:"80px 20px", background:colors.cream }}>
+      <div ref={ref} style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div className={`fade-up${vis?" visible":""}`} style={{ textAlign:"center", marginBottom:40 }}>
+          <div className="section-label">Classroom Culture</div>
+          <h2 className="section-title">Classroom Management</h2>
+        </div>
+        <div className={`fade-up${vis?" visible":""} card`} style={{ marginBottom:36, borderLeft:`4px solid ${colors.sage}`, background:"white" }}>
+          <p style={{ lineHeight:1.9, color:"#555" }}>My classroom management philosophy starts with one question: do my students feel safe here? Safe to answer wrong, safe to ask for help, safe to be themselves. When the answer is yes, most behavior challenges don't happen in the first place. I'm proactive — I design the physical space, the daily schedule, and our community agreements intentionally, so the environment itself does a lot of the work. I'm firm, I'm consistent, and I always lead with warmth. Kids know exactly what I expect, and they know I'm in their corner no matter what.</p>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:20 }}>
+          {strategies.map((s,i) => (
+            <div key={i} className={`fade-up stagger-${i+1}${vis?" visible":""} card`} style={{ textAlign:"center", border:`1px solid ${colors.sageLight}` }}>
+              <div style={{ fontSize:32, marginBottom:10 }}>{s.icon}</div>
+              <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:16, marginBottom:8 }}>{s.title}</h3>
+              <p style={{ fontSize:13, lineHeight:1.7, color:"#666" }}>{s.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TechComm() {
+  const ref = useRef(); const vis = useInView(ref);
+  const tools = [
+    ["🖥️","Google\nClassroom"],["📱","Seesaw"],["🎮","Nearpod"],
+    ["🎨","Canva"],["📊","Google\nSlides"],["📝","Google\nDocs"],
+    ["📹","Loom"],["🧩","Kahoot"],["📖","Epic!"],
+  ];
+  return (
+    <section id="tech" style={{ padding:"80px 20px", background:"white" }}>
+      <div ref={ref} style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div className={`fade-up${vis?" visible":""}`} style={{ textAlign:"center", marginBottom:40 }}>
+          <div className="section-label">Communication & Tools</div>
+          <h2 className="section-title">Communication & Technology</h2>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:32 }}>
+          <div className={`fade-up stagger-1${vis?" visible":""} card`}>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, marginBottom:16, color:colors.rose }}>📣 Parent Communication</h3>
+            {[
+              ["Weekly Newsletter","Every Friday I send a short recap — what we worked on, what's coming up, and one or two ways families can keep the learning going at home."],
+              ["Class Dojo","I use Dojo to share photos, celebrations, and real-time updates so parents never feel out of the loop on their child's day."],
+              ["Open Door Policy","My door and my inbox are always open. I'd rather over-communicate than have a family feel like they don't know what's happening in our classroom."],
+            ].map(([t,d]) => (
+              <div key={t} style={{ marginBottom:16 }}>
+                <div style={{ fontWeight:600, fontSize:14, marginBottom:4 }}>{t}</div>
+                <div style={{ fontSize:13, color:"#888", lineHeight:1.6 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+          <div className={`fade-up stagger-2${vis?" visible":""} card`}>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, marginBottom:16, color:colors.sage }}>💻 Technology Tools</h3>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+              {tools.map(([icon,name]) => (
+                <div key={name} className="tech-icon">
+                  <span style={{ fontSize:24 }}>{icon}</span>
+                  <span style={{ fontSize:11, whiteSpace:"pre", textAlign:"center", lineHeight:1.3 }}>{name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer id="contact" style={{ background:colors.charcoal, color:"white", padding:"60px 24px", textAlign:"center" }}>
+      <div style={{ maxWidth:600, margin:"0 auto" }}>
+        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, marginBottom:12 }}>Let's Connect 🍎</div>
+        <p style={{ color:"#bbb", lineHeight:1.8, marginBottom:28 }}>Thank you so much for taking the time to look through my portfolio. I'd love nothing more than to bring this same energy, care, and commitment to your school community. I hope to hear from you soon.</p>
+        <a href="mailto:your.email@example.com" className="pill-btn pill-btn-filled" style={{ marginBottom:32, display:"inline-block" }}>✉️ your.email@example.com</a>
+        <div style={{ borderTop:"1px solid #444", paddingTop:24, color:"#666", fontSize:13 }}>© 2024 Ms. Weinstein · All Rights Reserved</div>
+      </div>
+    </footer>
+  );
+}
+
+export default function App() {
+  return (
+    <div style={{ background:colors.cream, minHeight:"100vh" }}>
+      <Navbar />
+      <Hero />
+      <MeetMe />
+      <Philosophy />
+      <Resume />
+      <References />
+      <Lessons />
+      <Management />
+      <TechComm />
+      <Footer />
+    </div>
+  );
+}
